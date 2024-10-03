@@ -1,35 +1,44 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import { io, Socket } from "socket.io-client";
+import "./App.css";
+interface GameState {
+  board: string[][];
+  currentPlayer: string;
+}
+const socket: Socket = io("http://localhost:3000");
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [roomId, setRoomId] = useState<string>("");
+  const [gameState, setGameState] = useState<GameState>({
+    board: [
+      ["", "", ""],
+      ["", "", ""],
+      ["", "", ""],
+    ],
+    currentPlayer: "X",
+  });
+  console.log("room_id", roomId);
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.connected); // true
+      setRoomId(Math.random().toString(36).substring(2, 9));
+    });
+    socket.emit("joinGame", { roomId });
+
+    socket.on("startGame", ({ board }) => {
+      setGameState((prevState) => ({ ...prevState, board }));
+    });
+
+    return () => {
+      socket.off("startGame");
+    };
+  }, [roomId]);
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div>
+      <h1>Tic-tac-toe</h1>
+    </div>
+  );
 }
 
-export default App
+export default App;
