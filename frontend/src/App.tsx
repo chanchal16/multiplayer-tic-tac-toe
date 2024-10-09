@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { Route, Routes } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import "./App.css";
 import { Board } from "./components/Board";
-import Form from "./components/Form";
+import { Form } from "./components/Form";
 export interface GameState {
   board: string[][];
   currentPlayer: string;
@@ -10,7 +11,6 @@ export interface GameState {
 const socket: Socket = io("http://localhost:3000");
 
 function App() {
-  const [roomId, setRoomId] = useState<string>("");
   const [gameState, setGameState] = useState<GameState>({
     board: [
       ["", "", ""],
@@ -20,6 +20,8 @@ function App() {
     currentPlayer: "X",
   });
   const [winner, setWinner] = useState<string | null>(null);
+  const [mode, setMode] = useState<"new" | "join" | null>(null);
+  const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
 
   // useEffect(() => {
   //   socket.on("connect", () => {
@@ -48,17 +50,37 @@ function App() {
   //   };
   // }, [roomId]);
 
-  const handleCellClick = (row: number, col: number) => {
-    if (gameState.board[row][col] === "" && !winner) {
-      socket.emit("makeMove", { roomId, row, col });
-    }
-  };
+  // const handleCellClick = (row: number, col: number) => {
+  //   if (gameState.board[row][col] === "" && !winner) {
+  //     socket.emit("makeMove", { roomId, row, col });
+  //   }
+  // };
 
   return (
     <div className="p-6">
       <h1 className="text-red-700">Tic-tac-toe</h1>
-      <Form />
-      {/* <Board board={gameState.board} handleCellClick={handleCellClick} /> */}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Form
+              setCreatedRoomId={setCreatedRoomId}
+              mode={mode}
+              setMode={setMode}
+            />
+          }
+        />
+        <Route
+          path="/game"
+          element={
+            <Board
+              board={gameState.board}
+              mode={mode}
+              createdRoomId={createdRoomId}
+            />
+          }
+        />
+      </Routes>
       {winner !== null && <h2>{winner ? `Winner: ${winner}` : "Draw!"}</h2>}
     </div>
   );
