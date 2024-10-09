@@ -1,28 +1,47 @@
-import React, { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import io, { Socket } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
 
 const socket: Socket = io("http://localhost:3000");
+interface Iform {
+  setCreatedRoomId: Dispatch<SetStateAction<string | null>>;
+  mode: "new" | "join" | null;
+  setMode: Dispatch<SetStateAction<"new" | "join" | null>>;
+}
 
-const Form: React.FC = () => {
-  const [mode, setMode] = useState<"new" | "join" | null>(null);
+export const Form = ({ setCreatedRoomId, mode, setMode }: Iform) => {
   const [playerName, setPlayerName] = useState<string>("");
   const [roomId, setRoomId] = useState<string>("");
-  const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
-  console.log("create-room-id", createdRoomId);
+  const [formError, setFormError] = useState<string>("");
+  const navigate = useNavigate();
+
   // Handle form submissions
   const handleNewGame = () => {
     if (playerName) {
       const newRoomId = Math.random().toString(36).substring(2, 9); // Generate unique room ID
       setCreatedRoomId(newRoomId);
-      socket.emit("joinGame", { roomId: newRoomId, playerName });
+      socket.emit("createGame", { roomId: newRoomId, playerName });
+      navigate("/game");
     }
   };
 
   const handleJoinGame = () => {
+    console.log("click", playerName, roomId);
+    setFormError("");
     if (playerName && roomId) {
-      socket.emit("joinGame", { roomId, playerName });
+      socket.emit(
+        "joinGame",
+        { roomId, playerName },
+        (response: { success: boolean; message?: string }) => {
+          console.log("res", response);
+          if (response.success) {
+            navigate("/game");
+          } else {
+            setFormError(response.message ?? "Invalid room ID");
+          }
+        }
+      );
     }
-    console.log("roomId", roomId);
   };
 
   return (
@@ -61,20 +80,6 @@ const Form: React.FC = () => {
               >
                 Start Game
               </button>
-              {createdRoomId && (
-                <div className="mt-4">
-                  <p>
-                    Your Room ID: <strong>{createdRoomId}</strong>
-                  </p>
-                  <button
-                    className="border border-gray-600 p-1"
-                    onClick={() => navigator.clipboard.writeText(createdRoomId)}
-                  >
-                    copy
-                  </button>
-                  <p>Share this ID with your friend to join!</p>
-                </div>
-              )}
             </div>
           )}
           {mode === "join" && (
@@ -94,11 +99,12 @@ const Form: React.FC = () => {
                 onChange={(e) => setRoomId(e.target.value)}
                 className="border border-gray-400 px-2 py-1 mb-2 rounded w-full"
               />
+              {formError && <p className="text-red-500">{formError}</p>}
               <button
                 onClick={handleJoinGame}
                 className="bg-green-500 text-white py-2 px-4 rounded"
               >
-                Join Game
+                Join
               </button>
             </div>
           )}
@@ -113,5 +119,3 @@ const Form: React.FC = () => {
     </div>
   );
 };
-
-export default Form;
